@@ -568,13 +568,13 @@ func (r *Runtime) do() error {
 				}
 				switch syscallArg2.(type) {
 				case Register:
-					_, err := fmt.Fprintf(f, r.reg[syscallArg2.(Register)].String())
+					_, err := fmt.Fprintf(f, "%s", r.reg[syscallArg2.(Register)].String())
 					return err
 				case StackRelativeOffset:
-					_, err := fmt.Fprintf(f, r.stack[r.calcOffset(syscallArg2.(StackRelativeOffset))].String())
+					_, err := fmt.Fprintf(f, "%s", r.stack[r.calcOffset(syscallArg2.(StackRelativeOffset))].String())
 					return err
 				default:
-					_, err := fmt.Fprintf(f, syscallArg2.String())
+					_, err := fmt.Fprintf(f, "%s", syscallArg2.String())
 					return err
 				}
 			default:
