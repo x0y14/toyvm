@@ -66,6 +66,6 @@ const (
 )
 
 func NewRegisterSet() *[]Object {
-	rSet := make([]Object, _reg_end-1)
+	rSet := make([]Object, _reg_end)
 	return &rSet
 }
