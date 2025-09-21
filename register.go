@@ -30,6 +30,7 @@ func (r Register) String() string {
 		R12:            "r12",
 		ACM1:           "acm1",
 		ACM2:           "acm2",
+		HP:             "hp",
 		_reg_end:       "",
 	}
 	return kinds[r]
@@ -61,6 +62,8 @@ const (
 
 	ACM1
 	ACM2
+
+	HP // Heapアドレス用
 
 	_reg_end
 )
