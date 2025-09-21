@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,6 +16,7 @@ func TestNewRuntime(t *testing.T) {
 	reg[StackPointer] = Integer(1 - 1)
 	reg[ProgramCounter] = Integer(0)
 	reg[BasePointer] = Integer(0)
+	reg[HP] = Integer(0)
 	assert.Equal(t, &Runtime{
 		program: nil,
 		sym:     *NewSymbolTable(),
@@ -27,6 +29,7 @@ func TestNewRuntime(t *testing.T) {
 	reg[StackPointer] = Integer(15 - 1)
 	reg[ProgramCounter] = Integer(0)
 	reg[BasePointer] = Integer(0)
+	reg[HP] = Integer(0)
 	assert.Equal(t, &Runtime{
 		program: nil,
 		sym:     *NewSymbolTable(),
@@ -1245,4 +1248,63 @@ func TestRuntime_Run_var(t *testing.T) {
 	assert.Nil(t, rt.CollectLabels())
 	assert.Nil(t, rt.Run())
 	assert.Equal(t, Integer(0), rt.reg[ACM1])
+}
+
+func TestArray_Basic(t *testing.T) {
+	// Program:
+	//   arr = Alloc(4)    ; [len + 3要素] = 4
+	//   mem[arr+0] = 3    ; length
+	//   mem[arr+1] = 10   ; arr[0]
+	//   mem[arr+2] = 20   ; arr[1]
+	//   mem[arr+3] = 30   ; arr[2]
+	//   R0 = mem[arr+2]   ; load arr[1] into R0
+	//   ret
+
+	prog := Program{
+		DefLabel(0),
+
+		Alloc, Integer(4),
+		Pop, R1, // arr base → R1
+
+		// mem[arr+0] = 3
+		Mov, R2, R1,
+		Store, R2, Integer(3),
+
+		// mem[arr+1] = 10
+		Mov, R2, R1,
+		Add, R2, Integer(1),
+		Store, R2, Integer(10),
+
+		// mem[arr+2] = 20
+		Mov, R2, R1,
+		Add, R2, Integer(2),
+		Store, R2, Integer(20),
+
+		// mem[arr+3] = 30
+		Mov, R2, R1,
+		Add, R2, Integer(3),
+		Store, R2, Integer(30),
+
+		// R0 = mem[arr+2]
+		Mov, R2, R1,
+		Add, R2, Integer(2),
+		Load, R0, R2,
+
+		Exit,
+	}
+
+	rt := NewRuntime(64, 64)
+	rt.Load(prog)
+	if err := rt.CollectLabels(); err != nil {
+		t.Fatal(err)
+	}
+	if err := rt.Run(); err != nil {
+		t.Fatal(err)
+	}
+
+	got := rt.reg[R0].Value()
+	want := 20
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("R0 mismatch (-want +got):\n%s", diff)
+	}
 }

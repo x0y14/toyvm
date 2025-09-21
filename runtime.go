@@ -25,6 +25,7 @@ func NewRuntime(stackSize, memSize int) *Runtime {
 	r.setSp(stackSize - 1)
 	r.setPc(0)
 	r.setBp(0)
+	r.setHp(0)
 	return r
 }
 
@@ -115,6 +116,14 @@ func (r *Runtime) sp() int {
 }
 func (r *Runtime) setSp(sp int) {
 	r.reg[StackPointer] = Integer(sp)
+}
+
+// ヒープポインター
+func (r *Runtime) hp() int {
+	return r.reg[HP].Value()
+}
+func (r *Runtime) setHp(hp int) {
+	r.reg[HP] = Integer(hp)
 }
 
 // offsetの計算
@@ -548,6 +557,87 @@ func (r *Runtime) do() error {
 		default:
 			return fmt.Errorf("unsupported le value: %v == %v", lhs, rhs)
 		}
+	case Alloc:
+		// Alloc R1
+		// Alloc 100
+		defer func() { r.setPc(r.pc() + 1 + Operand(code.(Opcode))) }()
+		var size int
+		switch op := r.program[r.pc()+1].(type) {
+		case Integer:
+			size = op.Value()
+		case Register:
+			size = r.reg[op].Value()
+		default:
+			return fmt.Errorf("alloc size must be int/reg: %v", op)
+		}
+		// 領域確保できるか大きさチェック
+		if r.hp()+size >= len(r.mem) {
+			return fmt.Errorf("out of memory: need=%d, cap=%d", r.hp()+size, len(r.mem))
+		}
+		// N | 0 | 1 | 2 | ...
+		// Nは配列要素の個数
+		// baseはNの位置
+		base := r.hp()
+		r.setHp(r.hp() + size)
+		r.push(Integer(base))
+		return nil
+	case Store:
+		// Store DstHeapAddr Src
+		defer func() { r.setPc(r.pc() + 1 + Operand(code.(Opcode))) }()
+		// 保存先領域の確認
+		addrOp := r.program[r.pc()+1]
+		var addr int
+		switch op := addrOp.(type) {
+		case Integer:
+			addr = op.Value()
+		case Register:
+			addr = r.reg[op].Value()
+		default:
+			return fmt.Errorf("store addr must be int/reg: %v", op)
+		}
+		if addr < 0 || len(r.mem) <= addr {
+			return fmt.Errorf("store out of bounds: addr=%d", addr)
+		}
+		// 保存内容確認
+		src := r.program[r.pc()+2]
+		var val Object
+		switch op := src.(type) {
+		case Register:
+			val = r.reg[op]
+		case Integer, Character, Bool, Null:
+			val = op
+		default:
+			return fmt.Errorf("store src unsupported: %v", src)
+		}
+		return r.mem.Set(MemoryOffset(addr), val)
+	case Load:
+		// Load Dst SrcHeapAddr
+		defer func() { r.setPc(r.pc() + 1 + Operand(code.(Opcode))) }()
+		// 保存先レジスタのチェック
+		dstReg := r.program[r.pc()+1]
+		if _, ok := dstReg.(Register); !ok {
+			return fmt.Errorf("load dst must be register: %v", dstReg)
+		}
+		// 読み込み元
+		addrOp := r.program[r.pc()+2]
+		var addr int
+		switch op := addrOp.(type) {
+		case Integer:
+			addr = op.Value()
+		case Register:
+			addr = r.reg[op].Value()
+		default:
+			return fmt.Errorf("load addr must be int/reg: %v", op)
+		}
+		if addr < 0 || len(r.mem) <= addr {
+			return fmt.Errorf("load out of bounds: addr=%d", addr)
+		}
+		v, err := r.mem.Get(MemoryOffset(addr))
+		if err != nil {
+			return err
+		}
+		r.reg[dstReg.(Register)] = v
+		return nil
 	case Syscall:
 		defer func() { r.setPc(r.pc() + 1 + Operand(code.(Opcode))) }()
 		syscallNo := r.program[r.pc()+1]   // Write, ...

@@ -26,10 +26,15 @@ func (o Opcode) String() string {
 		Je:  "Je",
 		Jne: "Jne",
 
-		Eq:      "Eq",
-		Ne:      "Ne",
-		Lt:      "Lt",
-		Le:      "Le",
+		Eq: "Eq",
+		Ne: "Ne",
+		Lt: "Lt",
+		Le: "Le",
+
+		Alloc: "Alloc",
+		Store: "Store",
+		Load:  "Load",
+
 		Syscall: "Syscall",
 	}
 	return kinds[o]
@@ -59,6 +64,10 @@ const (
 	Lt
 	Le
 
+	Alloc
+	Store
+	Load
+
 	Syscall
 )
 
@@ -66,9 +75,9 @@ func Operand(op Opcode) int {
 	switch op {
 	case Nop, Exit, Ret:
 		return 0
-	case Push, Pop, Call, Jmp, Je, Jne:
+	case Push, Pop, Call, Jmp, Je, Jne, Alloc:
 		return 1
-	case Mov, Add, Sub, Eq, Ne, Lt, Le:
+	case Mov, Add, Sub, Eq, Ne, Lt, Le, Store, Load:
 		return 2
 	case Syscall:
 		return 3

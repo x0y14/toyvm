@@ -29,8 +29,11 @@ func (m *Memory) Set(offset MemoryOffset, obj Object) error {
 	return fmt.Errorf("offset must be 0< = x < %d", len(*m))
 }
 
-func (m *Memory) Get(offset MemoryOffset) Object {
-	return (*m)[offset.Value()]
+func (m *Memory) Get(offset MemoryOffset) (Object, error) {
+	if 0 <= offset.Value() && offset.Value() < len(*m) {
+		return (*m)[offset.Value()], nil
+	}
+	return nil, fmt.Errorf("out of range: %d in %d", offset, len(*m))
 }
 
 func (m *Memory) Delete(offset MemoryOffset) {
