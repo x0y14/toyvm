@@ -571,7 +571,7 @@ func (r *Runtime) do() error {
 			return fmt.Errorf("alloc size must be int/reg: %v", op)
 		}
 		// 領域確保できるか大きさチェック
-		if r.hp()+size > len(r.mem) {
+		if r.hp()+size >= len(r.mem) {
 			return fmt.Errorf("out of memory: need=%d, cap=%d", r.hp()+size, len(r.mem))
 		}
 		// N | 0 | 1 | 2 | ...
